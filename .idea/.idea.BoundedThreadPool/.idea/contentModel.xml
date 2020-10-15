@@ -6,6 +6,7 @@
     <e p="C:\Users\semiv\AppData\Roaming\JetBrains\Rider2020.2\consoles\db" t="IncludeRecursive" />
     <e p="C:\Users\semiv\AppData\Roaming\JetBrains\Rider2020.2\scratches" t="IncludeRecursive" />
     <e p="C:\Users\semiv\OneDrive\Documents\GitHub\BoundedThreadPool" t="IncludeFlat">
+      <e p=".git\info\exclude" t="IncludeRecursive" />
       <e p="BoundedThreadPool.sln" t="IncludeFlat" />
       <e p="BoundedThreadPoolTest" t="IncludeRecursive">
         <e p="bin" t="ExcludeRecursive" />
