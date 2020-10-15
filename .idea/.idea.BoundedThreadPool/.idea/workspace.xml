@@ -7,11 +7,16 @@
     <projectFile>BoundedThreadPoolTest/BoundedThreadPoolTest.csproj</projectFile>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ddab3665-a60d-4a7d-8409-daf232c06b4d" name="Default Changelist" comment="" />
+    <list default="true" id="ddab3665-a60d-4a7d-8409-daf232c06b4d" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.BoundedThreadPool/.idea/contentModel.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.BoundedThreadPool/.idea/contentModel.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/AD61CA47-F8B7-4CC6-93A0-BA44CC73B5C7/156/Semaphore.cs" root0="SKIP_HIGHLIGHTING" />
