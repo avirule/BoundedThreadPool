@@ -3,9 +3,10 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using ConcurrentPools;
+using ConcurrencyPools;
 
 #endregion
+
 
 namespace Example
 {
@@ -29,16 +30,10 @@ namespace Example
             BoundedThreadPool.DefaultThreadPoolSize();
 
             TestWork[] work = new TestWork[50];
-            for (int index = 0; index < work.Length; index++)
-            {
-                work[index] = new TestWork();
-            }
+            for (int index = 0; index < work.Length; index++) work[index] = new TestWork();
 
             Stopwatch stopwatch = Stopwatch.StartNew();
-            foreach (TestWork testWork in work)
-            {
-                BoundedThreadPool.QueueWork(testWork);
-            }
+            foreach (TestWork testWork in work) BoundedThreadPool.QueueWork(testWork);
 
             Console.WriteLine(stopwatch.Elapsed.TotalMilliseconds);
         }
