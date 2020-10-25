@@ -7,27 +7,6 @@ namespace ConcurrencyPools
 {
     public abstract class BoundedPool
     {
-        #region Active Pool State
-
-        private static BoundedPool? _Active;
-        public static BoundedPool Active
-        {
-            get
-            {
-                if (_Active is not null) return _Active;
-                else throw new NullReferenceException(nameof(Active));
-            }
-            private set
-            {
-                if (_Active is null) _Active = value;
-                else throw new InvalidOperationException("Cannot assign active pool more than once.");
-            }
-        }
-
-        public static void Create<TBoundedPool>() where TBoundedPool : BoundedPool => Active = Activator.CreateInstance<TBoundedPool>();
-
-        #endregion
-
         protected interface IWorker
         {
             public void Start();
@@ -41,14 +20,11 @@ namespace ConcurrencyPools
 
         public delegate void WorkInvocation();
 
-
         protected readonly CancellationTokenSource CancellationTokenSource;
         protected readonly ManualResetEventSlim ModifyWorkersReset;
         protected readonly List<IWorker> Workers;
         protected readonly ChannelReader<WorkInvocation> WorkReader;
         protected readonly ChannelWriter<WorkInvocation> WorkWriter;
-
-
 
         public int WorkerCount => Workers.Count;
 
@@ -148,5 +124,28 @@ namespace ConcurrencyPools
 
             ModifyWorkersReset.Set();
         }
+
+
+        #region Active Pool State
+
+        private static BoundedPool? _Active;
+
+        public static BoundedPool Active
+        {
+            get
+            {
+                if (_Active is not null) return _Active;
+                else throw new NullReferenceException(nameof(Active));
+            }
+            private set
+            {
+                if (_Active is null) _Active = value;
+                else throw new InvalidOperationException("Cannot assign active pool more than once.");
+            }
+        }
+
+        public static void Create<TBoundedPool>() where TBoundedPool : BoundedPool => Active = Activator.CreateInstance<TBoundedPool>();
+
+        #endregion
     }
 }
