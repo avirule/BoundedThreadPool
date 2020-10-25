@@ -27,7 +27,7 @@ namespace Example
         {
             Console.WriteLine("Hello World!");
 
-            BoundedPool.Create<BoundedThreadPool>();
+            BoundedThreadPool.SetActivePool();
             BoundedPool.Active.DefaultThreadPoolSize();
 
             TestWork[] work = new TestWork[50];

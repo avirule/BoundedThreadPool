@@ -36,7 +36,8 @@ namespace ConcurrencyPools
         }
 
         private BoundedThreadPool() { }
-        public static void Create() => Active = new BoundedThreadPool();
+        
+        public static void SetActivePool() => Active = new BoundedThreadPool();
 
         protected override IWorker CreateWorker() => new Worker(CancellationTokenSource.Token, WorkReader);
     }
