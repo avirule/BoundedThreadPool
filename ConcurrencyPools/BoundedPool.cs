@@ -137,14 +137,12 @@ namespace ConcurrencyPools
                 if (_Active is not null) return _Active;
                 else throw new NullReferenceException(nameof(Active));
             }
-            private set
+            protected set
             {
                 if (_Active is null) _Active = value;
                 else throw new InvalidOperationException("Cannot assign active pool more than once.");
             }
         }
-
-        public static void Create<TBoundedPool>() where TBoundedPool : BoundedPool => Active = Activator.CreateInstance<TBoundedPool>();
 
         #endregion
     }

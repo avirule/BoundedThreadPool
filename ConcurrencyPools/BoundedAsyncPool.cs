@@ -32,7 +32,8 @@ namespace ConcurrencyPools
             public void Cancel() => _InternalCancellation.Cancel();
         }
 
-        protected BoundedAsyncPool() { }
+        private BoundedAsyncPool() { }
+        public static void Create() => Active = new BoundedAsyncPool();
 
         protected override IWorker CreateWorker() => new Worker(CancellationTokenSource.Token, WorkReader);
     }
