@@ -19,7 +19,7 @@ namespace ConcurrencyPools
                 _WorkChannel = workChannel;
             }
 
-            public async Task Runtime()
+            private async Task Runtime()
             {
                 while (!_CompoundToken.IsCancellationRequested)
                 {
@@ -29,9 +29,10 @@ namespace ConcurrencyPools
             }
 
             public void Start() => Task.Run(Runtime, _CompoundToken);
-
             public void Cancel() => _InternalCancellation.Cancel();
         }
+
+        protected BoundedAsyncPool() { }
 
         protected override IWorker CreateWorker() => new Worker(CancellationTokenSource.Token, WorkReader);
     }

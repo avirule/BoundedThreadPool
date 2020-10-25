@@ -7,27 +7,9 @@ namespace ConcurrencyPools
 {
     public abstract class BoundedPool
     {
-        protected interface IWorker
-        {
-            public void Start();
-            public void Cancel();
-        }
-
-        public abstract class Work
-        {
-            public abstract void Execute();
-        }
-
-        public delegate void WorkInvocation();
+        #region Active Pool State
 
         private static BoundedPool? _Active;
-
-        protected readonly CancellationTokenSource CancellationTokenSource;
-        protected readonly ManualResetEventSlim ModifyWorkersReset;
-        protected readonly List<IWorker> Workers;
-        protected readonly ChannelReader<WorkInvocation> WorkReader;
-        protected readonly ChannelWriter<WorkInvocation> WorkWriter;
-
         public static BoundedPool Active
         {
             get
@@ -41,6 +23,32 @@ namespace ConcurrencyPools
                 else throw new InvalidOperationException("Cannot assign active pool more than once.");
             }
         }
+
+        public static void Create<TBoundedPool>() where TBoundedPool : BoundedPool => Active = Activator.CreateInstance<TBoundedPool>();
+
+        #endregion
+
+        protected interface IWorker
+        {
+            public void Start();
+            public void Cancel();
+        }
+
+        public abstract class Work
+        {
+            public abstract void Execute();
+        }
+
+        public delegate void WorkInvocation();
+
+
+        protected readonly CancellationTokenSource CancellationTokenSource;
+        protected readonly ManualResetEventSlim ModifyWorkersReset;
+        protected readonly List<IWorker> Workers;
+        protected readonly ChannelReader<WorkInvocation> WorkReader;
+        protected readonly ChannelWriter<WorkInvocation> WorkWriter;
+
+
 
         public int WorkerCount => Workers.Count;
 

@@ -12,7 +12,7 @@ namespace Example
 {
     internal class Program
     {
-        private class TestWork : BoundedThreadPool.Work
+        private class TestWork : BoundedPool.Work
         {
             private static int _TestInt;
 
@@ -27,13 +27,14 @@ namespace Example
         {
             Console.WriteLine("Hello World!");
 
-            BoundedThreadPool.DefaultThreadPoolSize();
+            BoundedPool.Create<BoundedThreadPool>();
+            BoundedPool.Active.DefaultThreadPoolSize();
 
             TestWork[] work = new TestWork[50];
             for (int index = 0; index < work.Length; index++) work[index] = new TestWork();
 
             Stopwatch stopwatch = Stopwatch.StartNew();
-            foreach (TestWork testWork in work) BoundedThreadPool.QueueWork(testWork);
+            foreach (TestWork testWork in work) BoundedPool.Active.QueueWork(testWork);
 
             Console.WriteLine(stopwatch.Elapsed.TotalMilliseconds);
         }
