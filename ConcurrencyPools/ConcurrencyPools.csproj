@@ -4,8 +4,6 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
         <LangVersion>9</LangVersion>
         <Nullable>enable</Nullable>
-        <AssemblyName>ConcurrentPools</AssemblyName>
-        <RootNamespace>ConcurrentPools</RootNamespace>
     </PropertyGroup>
 
 </Project>

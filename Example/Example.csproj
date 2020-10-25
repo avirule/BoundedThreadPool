@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\ConcurrentPools.BoundedThreadPool\ConcurrentPools.BoundedThreadPool.csproj" />
+      <ProjectReference Include="..\ConcurrencyPools\ConcurrencyPools.csproj" />
     </ItemGroup>
 
 </Project>

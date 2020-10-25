@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrentPools.BoundedThreadPool", "ConcurrentPools.BoundedThreadPool\ConcurrentPools.BoundedThreadPool.csproj", "{D0F215F5-A3CD-4CC4-93C9-97612F8DBF65}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrencyPools", "ConcurrencyPools\ConcurrencyPools.csproj", "{D0F215F5-A3CD-4CC4-93C9-97612F8DBF65}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BoundedThreadPoolTest", "BoundedThreadPoolTest\BoundedThreadPoolTest.csproj", "{7729191B-31AB-4AD3-9C5F-5396F26A4850}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example", "Example\Example.csproj", "{7729191B-31AB-4AD3-9C5F-5396F26A4850}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

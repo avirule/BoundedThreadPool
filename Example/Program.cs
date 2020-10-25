@@ -7,7 +7,7 @@ using ConcurrentPools;
 
 #endregion
 
-namespace BoundedThreadPoolTest
+namespace Example
 {
     internal class Program
     {
