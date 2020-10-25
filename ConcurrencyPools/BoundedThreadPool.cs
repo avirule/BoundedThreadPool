@@ -5,7 +5,7 @@ using System.Threading.Channels;
 
 namespace ConcurrencyPools
 {
-    public static class BoundedThreadPool
+    public class BoundedThreadPool  : BoundedPool
     {
         public abstract class Work
         {
@@ -99,7 +99,7 @@ namespace ConcurrencyPools
         /// </summary>
         /// <param name="size">Desired size of thread pool.</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <see cref="size" /> is less than 1.</exception>
-        public static void ModifyThreadPoolSize(int size)
+        public static void ModifyThreadPoolSize(uint size)
         {
             if (size < 1) throw new ArgumentOutOfRangeException(nameof(size), "Size must be greater than 1.");
             else if (size == WorkerCount) return;
