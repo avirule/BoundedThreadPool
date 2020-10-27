@@ -28,8 +28,6 @@ namespace ConcurrencyPools
         protected readonly ChannelReader<WorkInvocation> WorkReader;
         protected readonly ChannelWriter<WorkInvocation> WorkWriter;
 
-        public event EventHandler<Exception>? ExceptionOccurred;
-
         public int WorkerCount => Workers.Count;
 
         protected BoundedPool()
@@ -48,6 +46,8 @@ namespace ConcurrencyPools
 
             Workers = new List<IWorker>();
         }
+
+        public event EventHandler<Exception>? ExceptionOccurred;
 
         protected abstract IWorker CreateWorker();
 
@@ -135,6 +135,7 @@ namespace ConcurrencyPools
         }
 
         private void ExceptionOccurredCallback(object? sender, Exception exception) => ExceptionOccurred?.Invoke(sender, exception);
+
 
         #region Active Pool State
 
