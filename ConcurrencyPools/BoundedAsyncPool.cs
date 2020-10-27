@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -23,10 +24,19 @@ namespace ConcurrencyPools
             {
                 while (!_CompoundToken.IsCancellationRequested)
                 {
-                    await _WorkChannel.WaitToReadAsync(_CompoundToken).ConfigureAwait(false);
-                    (await _WorkChannel.ReadAsync(_CompoundToken).ConfigureAwait(false)).Invoke();
+                    try
+                    {
+                        await _WorkChannel.WaitToReadAsync(_CompoundToken).ConfigureAwait(false);
+                        (await _WorkChannel.ReadAsync(_CompoundToken).ConfigureAwait(false)).Invoke();
+                    }
+                    catch (Exception exception)
+                    {
+                        ExceptionOccurred?.Invoke(this, exception);
+                    }
                 }
             }
+
+            public event EventHandler<Exception>? ExceptionOccurred;
 
             public void Start() => Task.Run(Runtime, _CompoundToken);
             public void Cancel() => _InternalCancellation.Cancel();

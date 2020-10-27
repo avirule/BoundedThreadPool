@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Channels;
 
 namespace ConcurrencyPools
@@ -24,12 +25,21 @@ namespace ConcurrencyPools
             {
                 while (!_CompoundToken.IsCancellationRequested)
                 {
-                    if (_WorkChannel.TryRead(out WorkInvocation item)) item();
-                    else Thread.Sleep(1);
+                    try
+                    {
+                        if (_WorkChannel.TryRead(out WorkInvocation item)) item();
+                        else Thread.Sleep(1);
+                    }
+                    catch (Exception exception)
+                    {
+                        ExceptionOccurred?.Invoke(this, exception);
+                    }
                 }
             }
 
             public void Abort() => _InternalThread.Abort();
+
+            public event EventHandler<Exception>? ExceptionOccurred;
 
             public void Start() => _InternalThread.Start();
             public void Cancel() => _InternalCancellation.Cancel();

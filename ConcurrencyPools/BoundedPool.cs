@@ -9,6 +9,8 @@ namespace ConcurrencyPools
     {
         protected interface IWorker
         {
+            public event EventHandler<Exception>? ExceptionOccurred;
+
             public void Start();
             public void Cancel();
         }
@@ -25,6 +27,8 @@ namespace ConcurrencyPools
         protected readonly List<IWorker> Workers;
         protected readonly ChannelReader<WorkInvocation> WorkReader;
         protected readonly ChannelWriter<WorkInvocation> WorkWriter;
+
+        public event EventHandler<Exception>? ExceptionOccurred;
 
         public int WorkerCount => Workers.Count;
 
@@ -90,7 +94,10 @@ namespace ConcurrencyPools
             {
                 for (int index = WorkerCount - 1; index >= size; index--)
                 {
-                    Workers[index].Cancel();
+                    IWorker worker = Workers[index];
+                    worker.Cancel();
+                    worker.ExceptionOccurred -= ExceptionOccurredCallback;
+
                     Workers.RemoveAt(index);
                 }
             }
@@ -99,7 +106,9 @@ namespace ConcurrencyPools
                 for (int index = WorkerCount; index < size; index++)
                 {
                     IWorker worker = CreateWorker();
+                    worker.ExceptionOccurred += ExceptionOccurredCallback;
                     worker.Start();
+
                     Workers.Add(worker);
                 }
             }
@@ -125,6 +134,7 @@ namespace ConcurrencyPools
             ModifyWorkersReset.Set();
         }
 
+        private void ExceptionOccurredCallback(object? sender, Exception exception) => ExceptionOccurred?.Invoke(sender, exception);
 
         #region Active Pool State
 
