@@ -4,7 +4,22 @@ using System.Threading.Channels;
 
 namespace ConcurrencyPools
 {
-    public class BoundedThreadPool : BoundedPool
+    /// <summary>
+    ///     Used for executing work on a dedicated pool of threads.
+    /// </summary>
+    /// <remarks>
+    ///     <p>
+    ///         The workers for this pool use a check-read-sleep loop. This means that it's possible for
+    ///         there to be not-insignificant delay (whatever the NtTime slice is set to) between when work
+    ///         is queued and when that work is executed.
+    ///     </p>
+    ///     <p>
+    ///         With this in mind, unless you absolutely require a dedicated pool of threads (such as in the case
+    ///         that the .NET ThreadPool isn't available), it would be best to use the <see cref="BoundedAsyncPool" />
+    ///         class.
+    ///     </p>
+    /// </remarks>
+    public sealed class BoundedThreadPool : BoundedPool
     {
         private class Worker : IWorker
         {
@@ -37,16 +52,22 @@ namespace ConcurrencyPools
                 }
             }
 
-            public void Abort() => _InternalThread.Abort();
-
+            /// <inheritdoc />
             public event EventHandler<Exception>? ExceptionOccurred;
 
+            /// <inheritdoc />
             public void Start() => _InternalThread.Start();
+
+            /// <inheritdoc />
             public void Cancel() => _InternalCancellation.Cancel();
+
+            /// <inheritdoc />
+            public void Abort() => _InternalThread.Abort();
         }
 
-        private BoundedThreadPool() { }
-
+        /// <summary>
+        ///     Set <see cref="BoundedThreadPool" /> as the active pool.
+        /// </summary>
         public static void SetActivePool() => Active = new BoundedThreadPool();
 
         protected override IWorker CreateWorker() => new Worker(CancellationTokenSource.Token, WorkReader);

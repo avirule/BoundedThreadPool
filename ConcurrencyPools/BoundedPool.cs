@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
@@ -9,31 +10,74 @@ namespace ConcurrencyPools
     {
         protected interface IWorker
         {
+            /// <summary>
+            ///     Exception callback fired when an exception occurs in the worker.
+            /// </summary>
             public event EventHandler<Exception>? ExceptionOccurred;
 
+            /// <summary>
+            ///     Start the worker executing work.
+            /// </summary>
             public void Start();
+
+            /// <summary>
+            ///     Safely cancel the worker when it next observes the internal cancellation token.
+            /// </summary>
+            /// <remarks>
+            ///     If the worker is currently executing work, this means it will shut down after
+            ///     that work finishes.
+            /// </remarks>
             public void Cancel();
+
+            /// <summary>
+            ///     Exits the running context as aggressively as possible.
+            /// </summary>
+            /// <remarks>
+            ///     Only use this when shutting down the thread pool in an emergency.
+            /// </remarks>
+            public void Abort();
         }
 
         public abstract class Work
         {
+            /// <summary>
+            ///     Executes the work.
+            /// </summary>
+            /// <remarks>
+            ///     This is the method executed on the pool.
+            /// </remarks>
             public abstract void Execute();
         }
 
+        /// <summary>
+        ///     Used to wrap the <see cref="Work.Execute()" /> method and provide a common
+        ///     type for the pool workers to consume.
+        /// </summary>
         public delegate void WorkInvocation();
 
         protected readonly CancellationTokenSource CancellationTokenSource;
-        protected readonly ManualResetEventSlim ModifyWorkersReset;
-        protected readonly List<IWorker> Workers;
+        protected readonly ManualResetEventSlim ModifyWorkerGroupReset;
+
+        /// <Remarks>
+        ///     It may seem odd to use a <see cref="List{T}" /> instead of something such like a
+        ///     <see cref="ConcurrentBag{T}" />, but this is because the worker group shouldn't be
+        ///     modified in a multi-threaded context. An internal reset event is provided to ensure that
+        ///     while the worker group is modified, no other pool actions can occur.
+        /// </Remarks>
+        protected readonly List<IWorker> WorkerGroup;
+
         protected readonly ChannelReader<WorkInvocation> WorkReader;
         protected readonly ChannelWriter<WorkInvocation> WorkWriter;
 
-        public int WorkerCount => Workers.Count;
+        /// <summary>
+        ///     Total count of active workers.
+        /// </summary>
+        public int WorkerCount => WorkerGroup.Count;
 
         protected BoundedPool()
         {
             CancellationTokenSource = new CancellationTokenSource();
-            ModifyWorkersReset = new ManualResetEventSlim(true);
+            ModifyWorkerGroupReset = new ManualResetEventSlim(true);
 
             Channel<WorkInvocation> workChannel = Channel.CreateUnbounded<WorkInvocation>(new UnboundedChannelOptions
             {
@@ -44,16 +88,30 @@ namespace ConcurrencyPools
             WorkWriter = workChannel.Writer;
             WorkReader = workChannel.Reader;
 
-            Workers = new List<IWorker>();
+            WorkerGroup = new List<IWorker>();
         }
 
+        /// <summary>
+        ///     Exception callback fired when an exception occurs in any of the workers.
+        /// </summary>
         public event EventHandler<Exception>? ExceptionOccurred;
 
+        /// <summary>
+        ///     Creates a worker for the pool.
+        /// </summary>
+        /// <returns>An initialized <see cref="IWorker" /> to add to the worker group.</returns>
         protected abstract IWorker CreateWorker();
 
+        /// <summary>
+        ///     Queues a <see cref="WorkInvocation" /> on the pool.
+        /// </summary>
+        /// <param name="workInvocation">The <see cref="WorkInvocation" /> to be queued.</param>
+        /// <exception cref="InvalidOperationException">Thrown when the pool has no active workers.</exception>
+        /// <exception cref="Exception">Thrown when adding to the work queue fails. This exception is rare.</exception>
         public void QueueWork(WorkInvocation workInvocation)
         {
-            ModifyWorkersReset.Wait(CancellationTokenSource.Token);
+            // ensure the worker group isn't being modified
+            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
 
             if (WorkerCount == 0)
             {
@@ -65,7 +123,8 @@ namespace ConcurrencyPools
 
         public void QueueWork(Work work)
         {
-            ModifyWorkersReset.Wait(CancellationTokenSource.Token);
+            // ensure the worker group isn't being modified
+            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
 
             if (WorkerCount == 0)
             {
@@ -75,30 +134,34 @@ namespace ConcurrencyPools
             else if (!WorkWriter.TryWrite(work.Execute)) throw new Exception("Failed to queue work.");
         }
 
+        /// <summary>
+        ///     Initialize the pool with the default size.
+        /// </summary>
+        /// <remarks>
+        ///     The default size is the maximum of: <see cref="Environment.ProcessorCount" /> -or- 1.
+        /// </remarks>
         public void DefaultThreadPoolSize() => ModifyThreadPoolSize((uint)Math.Max(1, Environment.ProcessorCount - 2));
 
         /// <summary>
-        ///     Modifies <see cref="BoundedAsyncPool" />'s total number of worker threads.
+        ///     Modifies the total number of workers in the worker group.
         /// </summary>
-        /// <param name="size">Desired size of thread pool.</param>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <see cref="size" /> is less than 1.</exception>
+        /// <param name="size">New desired size of the worker group.</param>
         public void ModifyThreadPoolSize(uint size)
         {
-            if (size < 1) throw new ArgumentOutOfRangeException(nameof(size), "Size must be greater than 1.");
-            else if (size == WorkerCount) return;
+            if (size == WorkerCount) return;
 
-            ModifyWorkersReset.Wait(CancellationTokenSource.Token);
-            ModifyWorkersReset.Reset();
+            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
+            ModifyWorkerGroupReset.Reset();
 
             if (WorkerCount > size)
             {
                 for (int index = WorkerCount - 1; index >= size; index--)
                 {
-                    IWorker worker = Workers[index];
+                    IWorker worker = WorkerGroup[index];
                     worker.Cancel();
                     worker.ExceptionOccurred -= ExceptionOccurredCallback;
 
-                    Workers.RemoveAt(index);
+                    WorkerGroup.RemoveAt(index);
                 }
             }
             else
@@ -109,29 +172,39 @@ namespace ConcurrencyPools
                     worker.ExceptionOccurred += ExceptionOccurredCallback;
                     worker.Start();
 
-                    Workers.Add(worker);
+                    WorkerGroup.Add(worker);
                 }
             }
 
-            ModifyWorkersReset.Set();
+            ModifyWorkerGroupReset.Set();
         }
 
+        /// <summary>
+        ///     Safely cancels all workers.
+        /// </summary>
         public void Stop() => CancellationTokenSource.Cancel();
 
+        /// <summary>
+        ///     Aggressively abort all workers.
+        /// </summary>
+        /// <remarks>
+        ///     Only use this method in emergency situations. Undefined behaviour occurs when threads stop executing abruptly.
+        /// </remarks>
+        /// <param name="abort">Whether or not to abort all workers in the worker group.</param>
         public void Abort(bool abort)
         {
             if (!abort) return;
 
-            ModifyWorkersReset.Wait(CancellationTokenSource.Token);
-            ModifyWorkersReset.Reset();
+            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
+            ModifyWorkerGroupReset.Reset();
 
-            foreach (IWorker worker in Workers) worker.Cancel();
+            foreach (IWorker worker in WorkerGroup) worker.Abort();
 
-            Workers.Clear();
+            WorkerGroup.Clear();
 
             _Active = null;
 
-            ModifyWorkersReset.Set();
+            ModifyWorkerGroupReset.Set();
         }
 
         private void ExceptionOccurredCallback(object? sender, Exception exception) => ExceptionOccurred?.Invoke(sender, exception);
@@ -141,6 +214,13 @@ namespace ConcurrencyPools
 
         private static BoundedPool? _Active;
 
+        /// <summary>
+        ///     The currently active <see cref="BoundedPool" />.
+        /// </summary>
+        /// <exception cref="NullReferenceException">Thrown when there is no active <see cref="BoundedPool" />.</exception>
+        /// <exception cref="InvalidOperationException">
+        ///     Thrown when there is already an active <see cref="BoundedPool" />, and a new one cannot be assigned.
+        /// </exception>
         public static BoundedPool Active
         {
             get

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace ConcurrencyPools
 {
-    public class BoundedAsyncPool : BoundedPool
+    public sealed class BoundedAsyncPool : BoundedPool
     {
         private class Worker : IWorker
         {
@@ -36,14 +36,21 @@ namespace ConcurrencyPools
                 }
             }
 
+            /// <inheritdoc />
             public event EventHandler<Exception>? ExceptionOccurred;
 
+            /// <inheritdoc />
             public void Start() => Task.Run(Runtime, _CompoundToken);
+
+            /// <inheritdoc />
             public void Cancel() => _InternalCancellation.Cancel();
+
+            public void Abort() => _InternalCancellation.Cancel();
         }
 
-        private BoundedAsyncPool() { }
-
+        /// <summary>
+        ///     Set <see cref="BoundedThreadPool" /> as the active pool.
+        /// </summary>
         public static void SetActivePool() => Active = new BoundedAsyncPool();
 
         protected override IWorker CreateWorker() => new Worker(CancellationTokenSource.Token, WorkReader);
