@@ -204,6 +204,7 @@ namespace ConcurrencyPools
 
             _Active = null;
 
+            // allow any errant waiters to fire so the pool can be cleaned up
             ModifyWorkerGroupReset.Set();
         }
 
