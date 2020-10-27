@@ -25,7 +25,7 @@ void Startup()
         // this lambda is automatically cast to a `WorkInvocation`
         work[index] = () => Console.WriteLine(index);
 
-    // queue the work invocations to be execute
+    // queue the work invocations to be executed
     foreach (WorkInvocation workInvocation in work) 
         BoundedPool.Active.QueueWork(workInvocation);
 }
