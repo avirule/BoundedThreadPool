@@ -43,7 +43,7 @@ namespace ConcurrencyPools
                     try
                     {
                         if (_WorkChannel.TryRead(out WorkInvocation item)) item();
-                        else Thread.Sleep(1);
+                        else if (!_WorkChannel.WaitToReadAsync(_InternalCancellation.Token).Result) _InternalCancellation.Cancel();
                     }
                     catch (Exception exception)
                     {

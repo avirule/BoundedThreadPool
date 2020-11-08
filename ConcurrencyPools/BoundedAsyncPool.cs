@@ -26,7 +26,6 @@ namespace ConcurrencyPools
                 {
                     try
                     {
-                        await _WorkChannel.WaitToReadAsync(_CompoundToken).ConfigureAwait(false);
                         (await _WorkChannel.ReadAsync(_CompoundToken).ConfigureAwait(false)).Invoke();
                     }
                     catch (Exception exception)
