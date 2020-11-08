@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace ConcurrencyPools
 {
@@ -38,12 +39,21 @@ namespace ConcurrencyPools
 
             private void Runtime()
             {
+                async Task ChannelCompletionCancellation()
+                {
+                    await _WorkChannel.Completion;
+
+                    _InternalCancellation.Cancel();
+                }
+
+                Task.Run(ChannelCompletionCancellation, _CompoundToken);
+
                 while (!_CompoundToken.IsCancellationRequested)
                 {
                     try
                     {
                         if (_WorkChannel.TryRead(out WorkInvocation item)) item();
-                        else if (!_WorkChannel.WaitToReadAsync(_InternalCancellation.Token).Result) _InternalCancellation.Cancel();
+                        else Thread.Sleep(1);
                     }
                     catch (Exception exception)
                     {

@@ -22,6 +22,15 @@ namespace ConcurrencyPools
 
             private async Task Runtime()
             {
+                async Task ChannelCompletionCancellation()
+                {
+                    await _WorkChannel.Completion;
+
+                    _InternalCancellation.Cancel();
+                }
+
+                Task.Run(ChannelCompletionCancellation, _CompoundToken);
+
                 while (!_CompoundToken.IsCancellationRequested)
                 {
                     try
