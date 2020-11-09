@@ -13,7 +13,7 @@ namespace ConcurrencyPools
         {
             _Semaphore = new SemaphoreSlim(0);
 
-            Task.Run(WorkListener);
+            Task.Run(WorkListener, CancellationToken);
         }
 
         private async Task WorkListener()
@@ -30,12 +30,13 @@ namespace ConcurrencyPools
                         {
                             await _Semaphore.WaitAsync(CancellationToken);
 
-                            work.Invoke();
-
-                            _Semaphore.Release(1);
+                            if (CancellationToken.IsCancellationRequested)
+                            {
+                                work.Invoke();
+                                _Semaphore.Release(1);
+                            }
                         }
-                        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested) { }
-                        catch (Exception exception)
+                        catch (Exception exception) when (exception is not OperationCanceledException && !CancellationToken.IsCancellationRequested)
                         {
                             ExceptionOccurredCallback(this, exception);
                         }
@@ -44,8 +45,7 @@ namespace ConcurrencyPools
                     // dispatch work
                     Task.Run(WorkDispatch, CancellationToken);
                 }
-                catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested) { }
-                catch (Exception exception)
+                catch (Exception exception) when (exception is not OperationCanceledException && !CancellationToken.IsCancellationRequested)
                 {
                     ExceptionOccurredCallback(this, exception);
                 }
