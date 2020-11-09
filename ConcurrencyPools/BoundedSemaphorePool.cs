@@ -9,51 +9,47 @@ namespace ConcurrencyPools
     {
         private SemaphoreSlim _Semaphore;
 
-        public BoundedSemaphorePool() : base(true, false)
-        {
-            _Semaphore = new SemaphoreSlim(0);
+        public override int WorkerCount => _Semaphore.CurrentCount;
 
-            Task.Run(WorkListener, CancellationToken);
-        }
+        public BoundedSemaphorePool() : base(true, false) => _Semaphore = new SemaphoreSlim(0);
 
-        private async Task WorkListener()
+        public override void QueueWork(WorkInvocation workInvocation)
         {
-            while (!CancellationToken.IsCancellationRequested)
+            // ensure the worker group isn't being modified
+            ModifyWorkerGroupReset.Wait(CancellationToken);
+
+            if (WorkerCount == 0)
             {
-                try
+                throw new InvalidOperationException(
+                    $"{nameof(BoundedAsyncPool)} has no active workers. Call {nameof(DefaultPoolSize)}() or {nameof(ModifyPoolSize)}().");
+            }
+            else
+            {
+                async Task WorkDispatch()
                 {
-                    // wait for work
-                    WorkInvocation work = await WorkReader.ReadAsync(CancellationToken).ConfigureAwait(false);
-
-                    async Task WorkDispatch()
+                    try
                     {
-                        try
-                        {
-                            // wait to enter semaphore
-                            await _Semaphore.WaitAsync(CancellationToken).ConfigureAwait(false);
+                        // wait to enter semaphore
+                        await _Semaphore.WaitAsync(CancellationToken).ConfigureAwait(false);
 
-                            // if we're not cancelled, execute work
-                            if (!CancellationToken.IsCancellationRequested) work.Invoke();
+                        // if we're not cancelled, execute work
+                        if (!CancellationToken.IsCancellationRequested) workInvocation();
 
-                            // check cancellation again, in case we cancelled while work finished
-                            // if not, release semaphore slot
-                            if (!CancellationToken.IsCancellationRequested) _Semaphore.Release(1);
-                        }
-                        catch (Exception exception) when (exception is not OperationCanceledException && !CancellationToken.IsCancellationRequested)
-                        {
-                            ExceptionOccurredCallback(this, exception);
-                        }
+                        // check cancellation again, in case we cancelled while work finished
+                        // if not, release semaphore slot
+                        if (!CancellationToken.IsCancellationRequested) _Semaphore.Release(1);
                     }
+                    catch (Exception exception)
+                    {
+                        ExceptionOccurredCallback(this, exception);
+                    }
+                }
 
-                    // if we're not cancelled, dispatch work
-                    if (!CancellationToken.IsCancellationRequested) Task.Run(WorkDispatch, CancellationToken);
-                }
-                catch (Exception exception) when (exception is not OperationCanceledException && !CancellationToken.IsCancellationRequested)
-                {
-                    ExceptionOccurredCallback(this, exception);
-                }
+                Task.Run(WorkDispatch, CancellationToken);
             }
         }
+
+        public override void QueueWork(Work work) => QueueWork(work.Execute);
 
         public override void ModifyPoolSize(uint size)
         {
@@ -64,15 +60,12 @@ namespace ConcurrencyPools
 
             if (WorkerCount > 0)
             {
-                for (int i = 0; i < WorkerCount; i++) _Semaphore.Wait();
+                for (int i = 0; i < _Semaphore.CurrentCount; i++) _Semaphore.Wait();
                 _Semaphore.Release(WorkerCount);
             }
 
             _Semaphore.Dispose();
             _Semaphore = new SemaphoreSlim((int)size);
-
-            // semaphore pool doesn't use workers, but we need to keep count accurate
-            WorkerGroup.AddRange(Enumerable.Repeat<IWorker>(null!, (int)size));
 
             ModifyWorkerGroupReset.Set();
         }

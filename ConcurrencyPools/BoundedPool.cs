@@ -72,7 +72,7 @@ namespace ConcurrencyPools
         /// <summary>
         ///     Total count of active workers.
         /// </summary>
-        public int WorkerCount => WorkerGroup.Count;
+        public virtual int WorkerCount => WorkerGroup.Count;
 
         public CancellationToken CancellationToken => CancellationTokenSource.Token;
 
@@ -110,7 +110,7 @@ namespace ConcurrencyPools
         /// <param name="workInvocation">The <see cref="WorkInvocation" /> to be queued.</param>
         /// <exception cref="InvalidOperationException">Thrown when the pool has no active workers.</exception>
         /// <exception cref="Exception">Thrown when adding to the work queue fails. This exception is rare.</exception>
-        public void QueueWork(WorkInvocation workInvocation)
+        public virtual void QueueWork(WorkInvocation workInvocation)
         {
             // ensure the worker group isn't being modified
             ModifyWorkerGroupReset.Wait(CancellationToken);
@@ -123,7 +123,7 @@ namespace ConcurrencyPools
             else if (!WorkWriter.TryWrite(workInvocation)) throw new Exception("Failed to queue work.");
         }
 
-        public void QueueWork(Work work)
+        public virtual void QueueWork(Work work)
         {
             // ensure the worker group isn't being modified
             ModifyWorkerGroupReset.Wait(CancellationToken);
