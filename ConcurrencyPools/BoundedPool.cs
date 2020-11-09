@@ -74,6 +74,8 @@ namespace ConcurrencyPools
         /// </summary>
         public int WorkerCount => WorkerGroup.Count;
 
+        public CancellationToken CancellationToken => CancellationTokenSource.Token;
+
         protected BoundedPool(bool singleReader, bool singleWriter)
         {
             CancellationTokenSource = new CancellationTokenSource();
@@ -111,7 +113,7 @@ namespace ConcurrencyPools
         public void QueueWork(WorkInvocation workInvocation)
         {
             // ensure the worker group isn't being modified
-            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
+            ModifyWorkerGroupReset.Wait(CancellationToken);
 
             if (WorkerCount == 0)
             {
@@ -124,7 +126,7 @@ namespace ConcurrencyPools
         public void QueueWork(Work work)
         {
             // ensure the worker group isn't being modified
-            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
+            ModifyWorkerGroupReset.Wait(CancellationToken);
 
             if (WorkerCount == 0)
             {
@@ -148,9 +150,9 @@ namespace ConcurrencyPools
         /// <param name="size">New desired size of the worker group.</param>
         public virtual void ModifyThreadPoolSize(uint size)
         {
-            if (size == WorkerCount) return;
+            if (size == WorkerCount || CancellationToken.IsCancellationRequested) return;
 
-            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
+            ModifyWorkerGroupReset.Wait(CancellationToken);
             ModifyWorkerGroupReset.Reset();
 
             if (WorkerCount > size)
@@ -195,7 +197,7 @@ namespace ConcurrencyPools
         {
             if (!abort) return;
 
-            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
+            ModifyWorkerGroupReset.Wait(CancellationToken);
             ModifyWorkerGroupReset.Reset();
 
             foreach (IWorker worker in WorkerGroup) worker?.Abort();
@@ -208,7 +210,7 @@ namespace ConcurrencyPools
             ModifyWorkerGroupReset.Set();
         }
 
-        private void ExceptionOccurredCallback(object? sender, Exception exception) => ExceptionOccurred?.Invoke(sender, exception);
+        protected void ExceptionOccurredCallback(object? sender, Exception exception) => ExceptionOccurred?.Invoke(sender, exception);
 
 
         #region Active Pool State

@@ -18,34 +18,53 @@ namespace ConcurrencyPools
 
         private async Task WorkListener()
         {
-            async Task WorkDispatcher(WorkInvocation work)
+            while (!CancellationToken.IsCancellationRequested)
             {
-                await _Semaphore.WaitAsync(CancellationTokenSource.Token);
+                try
+                {
+                    WorkInvocation work = await WorkReader.ReadAsync(CancellationToken);
 
-                work.Invoke();
+                    async Task WorkDispatch()
+                    {
+                        try
+                        {
+                            await _Semaphore.WaitAsync(CancellationToken);
 
-                _Semaphore.Release(1);
-            }
+                            work.Invoke();
 
-            while (!CancellationTokenSource.IsCancellationRequested)
-            {
-                WorkInvocation work = await WorkReader.ReadAsync(CancellationTokenSource.Token);
+                            _Semaphore.Release(1);
+                        }
+                        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested) { }
+                        catch (Exception exception)
+                        {
+                            ExceptionOccurredCallback(this, exception);
+                        }
+                    }
 
-                // dispatch work
-                Task.Run(() => WorkDispatcher(work));
+                    // dispatch work
+                    Task.Run(WorkDispatch, CancellationToken);
+                }
+                catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested) { }
+                catch (Exception exception)
+                {
+                    ExceptionOccurredCallback(this, exception);
+                }
             }
         }
 
         public override void ModifyThreadPoolSize(uint size)
         {
-            if (size == WorkerCount) return;
+            if ((size == WorkerCount) || CancellationToken.IsCancellationRequested) return;
 
-            ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
+            ModifyWorkerGroupReset.Wait(CancellationToken);
             ModifyWorkerGroupReset.Reset();
 
-            for (int i = 0; i < WorkerCount; i++) _Semaphore.Wait();
+            if (WorkerCount > 0)
+            {
+                for (int i = 0; i < WorkerCount; i++) _Semaphore.Wait();
+                _Semaphore.Release(WorkerCount);
+            }
 
-            _Semaphore.Release(WorkerCount);
             _Semaphore.Dispose();
             _Semaphore = new SemaphoreSlim((int)size);
 
@@ -57,6 +76,8 @@ namespace ConcurrencyPools
 
         protected override IWorker CreateWorker() => throw new NotImplementedException();
 
-        public static void SetActive() => Active = new BoundedSemaphorePool();
+        public static void SetActivePool() => Active = new BoundedSemaphorePool();
+
+        ~BoundedSemaphorePool() => _Semaphore.Dispose();
     }
 }
