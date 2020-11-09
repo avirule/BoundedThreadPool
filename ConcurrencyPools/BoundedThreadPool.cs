@@ -75,6 +75,8 @@ namespace ConcurrencyPools
             public void Abort() => _InternalThread.Abort();
         }
 
+        public BoundedThreadPool() : base(false, false) {}
+
         /// <summary>
         ///     Set <see cref="BoundedThreadPool" /> as the active pool.
         /// </summary>

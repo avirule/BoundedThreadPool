@@ -74,15 +74,15 @@ namespace ConcurrencyPools
         /// </summary>
         public int WorkerCount => WorkerGroup.Count;
 
-        protected BoundedPool()
+        protected BoundedPool(bool singleReader, bool singleWriter)
         {
             CancellationTokenSource = new CancellationTokenSource();
             ModifyWorkerGroupReset = new ManualResetEventSlim(true);
 
             Channel<WorkInvocation> workChannel = Channel.CreateUnbounded<WorkInvocation>(new UnboundedChannelOptions
             {
-                SingleReader = false,
-                SingleWriter = false
+                SingleReader = singleReader,
+                SingleWriter = singleWriter
             });
 
             WorkWriter = workChannel.Writer;
@@ -146,7 +146,7 @@ namespace ConcurrencyPools
         ///     Modifies the total number of workers in the worker group.
         /// </summary>
         /// <param name="size">New desired size of the worker group.</param>
-        public void ModifyThreadPoolSize(uint size)
+        public virtual void ModifyThreadPoolSize(uint size)
         {
             if (size == WorkerCount) return;
 
@@ -198,7 +198,7 @@ namespace ConcurrencyPools
             ModifyWorkerGroupReset.Wait(CancellationTokenSource.Token);
             ModifyWorkerGroupReset.Reset();
 
-            foreach (IWorker worker in WorkerGroup) worker.Abort();
+            foreach (IWorker worker in WorkerGroup) worker?.Abort();
 
             WorkerGroup.Clear();
 
