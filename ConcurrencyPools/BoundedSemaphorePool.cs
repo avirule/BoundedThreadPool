@@ -22,19 +22,22 @@ namespace ConcurrencyPools
             {
                 try
                 {
+                    // wait for work
                     WorkInvocation work = await WorkReader.ReadAsync(CancellationToken);
 
                     async Task WorkDispatch()
                     {
                         try
                         {
+                            // wait to enter semaphore
                             await _Semaphore.WaitAsync(CancellationToken);
 
-                            if (CancellationToken.IsCancellationRequested)
-                            {
-                                work.Invoke();
-                                _Semaphore.Release(1);
-                            }
+                            // if we're not cancelled, execute work
+                            if (!CancellationToken.IsCancellationRequested) work.Invoke();
+
+                            // check cancellation again, in case we cancelled while work finished
+                            // if not, release semaphore slot
+                            if (!CancellationToken.IsCancellationRequested) _Semaphore.Release(1);
                         }
                         catch (Exception exception) when (exception is not OperationCanceledException && !CancellationToken.IsCancellationRequested)
                         {
@@ -42,8 +45,8 @@ namespace ConcurrencyPools
                         }
                     }
 
-                    // dispatch work
-                    Task.Run(WorkDispatch, CancellationToken);
+                    // if we're not cancelled, dispatch work
+                    if (!CancellationToken.IsCancellationRequested) Task.Run(WorkDispatch, CancellationToken);
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException && !CancellationToken.IsCancellationRequested)
                 {
