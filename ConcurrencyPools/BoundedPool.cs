@@ -76,10 +76,25 @@ namespace ConcurrencyPools
 
         public CancellationToken CancellationToken => CancellationTokenSource.Token;
 
+        protected BoundedPool(bool initializeChannels)
+        {
+            CancellationTokenSource = new CancellationTokenSource();
+            ModifyWorkerGroupReset = new ManualResetEventSlim(true);
+            WorkerGroup = new List<IWorker>();
+
+            if (!initializeChannels) return;
+
+            Channel<WorkInvocation> workChannel = Channel.CreateUnbounded<WorkInvocation>();
+
+            WorkWriter = workChannel.Writer;
+            WorkReader = workChannel.Reader;
+        }
+
         protected BoundedPool(bool singleReader, bool singleWriter)
         {
             CancellationTokenSource = new CancellationTokenSource();
             ModifyWorkerGroupReset = new ManualResetEventSlim(true);
+            WorkerGroup = new List<IWorker>();
 
             Channel<WorkInvocation> workChannel = Channel.CreateUnbounded<WorkInvocation>(new UnboundedChannelOptions
             {
@@ -89,8 +104,6 @@ namespace ConcurrencyPools
 
             WorkWriter = workChannel.Writer;
             WorkReader = workChannel.Reader;
-
-            WorkerGroup = new List<IWorker>();
         }
 
         /// <summary>
@@ -123,18 +136,7 @@ namespace ConcurrencyPools
             else if (!WorkWriter.TryWrite(workInvocation)) throw new Exception("Failed to queue work.");
         }
 
-        public virtual void QueueWork(Work work)
-        {
-            // ensure the worker group isn't being modified
-            ModifyWorkerGroupReset.Wait(CancellationToken);
-
-            if (WorkerCount == 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(BoundedAsyncPool)} has no active workers. Call {nameof(DefaultPoolSize)}() or {nameof(ModifyPoolSize)}().");
-            }
-            else if (!WorkWriter.TryWrite(work.Execute)) throw new Exception("Failed to queue work.");
-        }
+        public virtual void QueueWork(Work work) => QueueWork(work.Execute);
 
         /// <summary>
         ///     Initialize the pool with the default size.
@@ -150,7 +152,7 @@ namespace ConcurrencyPools
         /// <param name="size">New desired size of the worker group.</param>
         public virtual void ModifyPoolSize(uint size)
         {
-            if (size == WorkerCount || CancellationToken.IsCancellationRequested) return;
+            if ((size == WorkerCount) || CancellationToken.IsCancellationRequested) return;
 
             ModifyWorkerGroupReset.Wait(CancellationToken);
             ModifyWorkerGroupReset.Reset();

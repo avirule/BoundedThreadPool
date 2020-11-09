@@ -8,10 +8,11 @@ namespace ConcurrencyPools
     public class BoundedSemaphorePool : BoundedPool
     {
         private SemaphoreSlim _Semaphore;
+        private int _WorkerCount;
 
-        public override int WorkerCount => _Semaphore.CurrentCount;
+        public override int WorkerCount => _WorkerCount;
 
-        public BoundedSemaphorePool() : base(true, false) => _Semaphore = new SemaphoreSlim(0);
+        public BoundedSemaphorePool() : base(false) => _Semaphore = new SemaphoreSlim(0);
 
         public override void QueueWork(WorkInvocation workInvocation)
         {
@@ -21,7 +22,7 @@ namespace ConcurrencyPools
             if (WorkerCount == 0)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(BoundedAsyncPool)} has no active workers. Call {nameof(DefaultPoolSize)}() or {nameof(ModifyPoolSize)}().");
+                    $"{nameof(BoundedSemaphorePool)} has no active workers. Call {nameof(DefaultPoolSize)}() or {nameof(ModifyPoolSize)}().");
             }
             else
             {
@@ -60,12 +61,13 @@ namespace ConcurrencyPools
 
             if (WorkerCount > 0)
             {
-                for (int i = 0; i < _Semaphore.CurrentCount; i++) _Semaphore.Wait();
+                for (int i = 0; i < WorkerCount; i++) _Semaphore.Wait();
                 _Semaphore.Release(WorkerCount);
             }
 
             _Semaphore.Dispose();
             _Semaphore = new SemaphoreSlim((int)size);
+            Interlocked.Exchange(ref _WorkerCount, (int)size);
 
             ModifyWorkerGroupReset.Set();
         }
