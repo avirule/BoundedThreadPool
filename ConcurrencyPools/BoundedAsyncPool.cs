@@ -24,7 +24,7 @@ namespace ConcurrencyPools
             {
                 async Task ChannelCompletionCancellation()
                 {
-                    await _WorkChannel.Completion;
+                    await _WorkChannel.Completion.ConfigureAwait(false);
 
                     _InternalCancellation.Cancel();
                 }
@@ -56,7 +56,7 @@ namespace ConcurrencyPools
             public void Abort() => _InternalCancellation.Cancel();
         }
 
-        public BoundedAsyncPool() : base(false, false) {}
+        public BoundedAsyncPool() : base(false, false) { }
 
         /// <summary>
         ///     Set <see cref="BoundedThreadPool" /> as the active pool.

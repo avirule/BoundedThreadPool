@@ -118,7 +118,7 @@ namespace ConcurrencyPools
             if (WorkerCount == 0)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(BoundedAsyncPool)} has no active workers. Call {nameof(DefaultThreadPoolSize)}() or {nameof(ModifyThreadPoolSize)}().");
+                    $"{nameof(BoundedAsyncPool)} has no active workers. Call {nameof(DefaultPoolSize)}() or {nameof(ModifyPoolSize)}().");
             }
             else if (!WorkWriter.TryWrite(workInvocation)) throw new Exception("Failed to queue work.");
         }
@@ -131,7 +131,7 @@ namespace ConcurrencyPools
             if (WorkerCount == 0)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(BoundedAsyncPool)} has no active workers. Call {nameof(DefaultThreadPoolSize)}() or {nameof(ModifyThreadPoolSize)}().");
+                    $"{nameof(BoundedAsyncPool)} has no active workers. Call {nameof(DefaultPoolSize)}() or {nameof(ModifyPoolSize)}().");
             }
             else if (!WorkWriter.TryWrite(work.Execute)) throw new Exception("Failed to queue work.");
         }
@@ -142,13 +142,13 @@ namespace ConcurrencyPools
         /// <remarks>
         ///     The default size is the maximum of: <see cref="Environment.ProcessorCount" /> -or- 1.
         /// </remarks>
-        public void DefaultThreadPoolSize() => ModifyThreadPoolSize((uint)Math.Max(1, Environment.ProcessorCount - 2));
+        public void DefaultPoolSize() => ModifyPoolSize((uint)Math.Max(1, Environment.ProcessorCount - 2));
 
         /// <summary>
         ///     Modifies the total number of workers in the worker group.
         /// </summary>
         /// <param name="size">New desired size of the worker group.</param>
-        public virtual void ModifyThreadPoolSize(uint size)
+        public virtual void ModifyPoolSize(uint size)
         {
             if (size == WorkerCount || CancellationToken.IsCancellationRequested) return;
 

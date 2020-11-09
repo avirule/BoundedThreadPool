@@ -23,14 +23,14 @@ namespace ConcurrencyPools
                 try
                 {
                     // wait for work
-                    WorkInvocation work = await WorkReader.ReadAsync(CancellationToken);
+                    WorkInvocation work = await WorkReader.ReadAsync(CancellationToken).ConfigureAwait(false);
 
                     async Task WorkDispatch()
                     {
                         try
                         {
                             // wait to enter semaphore
-                            await _Semaphore.WaitAsync(CancellationToken);
+                            await _Semaphore.WaitAsync(CancellationToken).ConfigureAwait(false);
 
                             // if we're not cancelled, execute work
                             if (!CancellationToken.IsCancellationRequested) work.Invoke();
@@ -55,7 +55,7 @@ namespace ConcurrencyPools
             }
         }
 
-        public override void ModifyThreadPoolSize(uint size)
+        public override void ModifyPoolSize(uint size)
         {
             if ((size == WorkerCount) || CancellationToken.IsCancellationRequested) return;
 
