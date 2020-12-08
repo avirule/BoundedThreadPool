@@ -40,7 +40,7 @@ namespace ConcurrencyPools
                         // if not, release semaphore slot
                         if (!CancellationToken.IsCancellationRequested) _Semaphore.Release(1);
                     }
-                    catch (Exception exception)
+                    catch (Exception exception) when (exception is not OperationCanceledException)
                     {
                         ExceptionOccurredCallback(this, exception);
                     }

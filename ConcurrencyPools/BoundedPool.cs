@@ -40,12 +40,6 @@ namespace ConcurrencyPools
 
         public abstract class Work
         {
-            /// <summary>
-            ///     Executes the work.
-            /// </summary>
-            /// <remarks>
-            ///     This is the method executed on the pool.
-            /// </remarks>
             public abstract void Execute();
         }
 
